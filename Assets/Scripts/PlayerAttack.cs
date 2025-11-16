@@ -4,13 +4,25 @@ using UnityEngine.Events;
 
 public class PlayerAttack : MonoBehaviour
 {
+    [SerializeField] CharacterStats playerStats;
     public static PlayerAttack instance;
     public int maxHealth = 100;
     int _currentHealth;
     public int currentHealth
     {
         get { return _currentHealth; }
-        set { _currentHealth = value; OnHPChange.Invoke(_currentHealth); }
+        set { 
+                if(value <= 0) 
+                {
+                    _currentHealth = 0;
+                    OnPlayerDeath.Invoke();
+                }
+                else
+                {
+                    _currentHealth = value; 
+                    OnHPChange.Invoke(_currentHealth); 
+                }
+            }
     }
     public int meleeDamage = 50;
     public int bulletDamage = 20;
@@ -24,13 +36,16 @@ public class PlayerAttack : MonoBehaviour
     [HideInInspector] public UnityEvent ShowSkillCooldown;
     [HideInInspector] public UnityEvent ShowUltimateDuration;
     [HideInInspector] public UnityEvent ShowUltimateCooldown;
-
     [HideInInspector] public UnityEvent<int> OnHPChange;
+    [HideInInspector] public UnityEvent OnPlayerTakeDamage;
+    [HideInInspector] public UnityEvent OnPlayerDeath;
     #endregion
     [SerializeField] Animator gunAnimator;
     [SerializeField] Animator meleeAnimator;
     bool isGunOut;
+    bool canShoot;
     bool isMeleeOut;
+    bool canStab;
     bool isReloading;
     public int currentAmmo;
     public int maxAmmo = 5;
@@ -44,7 +59,13 @@ public class PlayerAttack : MonoBehaviour
         isMeleeOut = false;
         isSkillReady = false;
         isUltimateReady = false;
+        canShoot = true;
+        canStab = true;
         currentAmmo = maxAmmo;
+        maxHealth = playerStats.maxHealth;
+        meleeDamage = playerStats.damage;
+        bulletDamage = playerStats.damage;
+        gunAnimator.gameObject.SetActive(true);
         meleeAnimator.gameObject.SetActive(false);
     }
 
@@ -56,25 +77,28 @@ public class PlayerAttack : MonoBehaviour
         ShowSkillCooldown.Invoke();
         StartCoroutine(UltimateCooldown());
         ShowUltimateCooldown.Invoke();
+
+        OnPlayerDeath.AddListener(() => canShoot = false);
+        OnPlayerDeath.AddListener(() => canStab = false);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetButtonDown("Fire1"))
+        if (Input.GetButtonDown("Fire1") && Time.timeScale > 0f && !TransitionManager.instance.fadeInProgress)
         {
-            if (isGunOut && !isReloading)
+            if (isGunOut && !isReloading && canShoot)
             {
-                Shoot();
+                StartCoroutine(Shoot());
             }
-            else if (isMeleeOut)
+            else if (isMeleeOut && canStab)
             {
-                AttackMelee();
+                StartCoroutine(AttackMelee());
             }
         }
         if (Input.GetKeyDown(KeyCode.R) && isGunOut && !isReloading)
         {
-            gunAnimator.SetTrigger("Reload");
+            Reload();
         }
 
         if (Input.GetKeyDown(KeyCode.E) && isSkillReady)
@@ -98,13 +122,15 @@ public class PlayerAttack : MonoBehaviour
         }
     }
 
-    void Shoot()
+    IEnumerator Shoot()
     {
         if (currentAmmo > 0)
         {
+            canShoot = false;
             gunAnimator.SetTrigger("Attack");
             currentAmmo--;
             OnShoot.Invoke();
+            AudioManager.instance.PlaySFX("Shoot");
             Debug.Log("Ammo left: " + currentAmmo);
 
             // build a ray from the camera center;
@@ -126,6 +152,8 @@ public class PlayerAttack : MonoBehaviour
                     Debug.Log("Non-enemy target hit.");
                 }
             }
+            yield return new WaitForSeconds(0.3f); // fire rate
+            canShoot = true;
         }
         else
         {
@@ -175,10 +203,11 @@ public class PlayerAttack : MonoBehaviour
         meleeAnimator.SetTrigger("ShowWeapon");
     }
 
-    void AttackMelee()
+    IEnumerator AttackMelee()
     {
+        canStab = false;
         meleeAnimator.SetTrigger("Attack");
-
+        yield return new WaitForSeconds(0.25f); // delay to match the animation hit frame
         // build a ray from the camera center;
         Ray ray;
         ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
@@ -198,6 +227,14 @@ public class PlayerAttack : MonoBehaviour
                 Debug.Log("Non-enemy target hit.");
             }
         }
+        yield return new WaitForSeconds(0.25f); // attack rate
+        canStab = true;
+    }
+
+    public void TakeDamage(int damage)
+    {
+        currentHealth -= damage;
+        OnPlayerTakeDamage.Invoke();
     }
 
     #region Skill and Ultimate Cooldown

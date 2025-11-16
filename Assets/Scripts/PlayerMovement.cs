@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -8,20 +6,17 @@ public class PlayerMovement : MonoBehaviour
     public float speed = 12f;
     public float gravity = -9.81f * 2;
     public float jumpHeight = 3f;
-
     public Transform groundCheck;
     public float groundDistance = 0.4f;
     public LayerMask groundMask;
-    Vector3 lastPosition;
-
     Vector3 velocity = Vector3.zero;
 
     bool isGrounded;
-    bool isMoving;
     // Start is called before the first frame update
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        PlayerAttack.instance.OnPlayerDeath.AddListener(() => speed = 0f);
     }
 
     // Update is called once per frame
@@ -33,8 +28,8 @@ public class PlayerMovement : MonoBehaviour
             velocity.y = -2f;
         }
 
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+        float x = Input.GetAxisRaw("Horizontal");
+        float z = Input.GetAxisRaw("Vertical");
 
         // get the cams rotation
         // set the x & z to 0, then use this as reference for movement
@@ -52,15 +47,5 @@ public class PlayerMovement : MonoBehaviour
         
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
-        if (lastPosition != transform.position && isGrounded)
-        {
-            isMoving = true;
-        }
-        else
-        {
-            isMoving = false;
-        }
-
-        lastPosition = transform.position;
     }
 }

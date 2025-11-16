@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CharacterStats : MonoBehaviour
+[CreateAssetMenu(fileName = "CharacterStats", menuName = "ScriptableObjects/CharacterStats")]
+public class CharacterStats : ScriptableObject
 {
-    int maxHealth;
-    int damage;
+    public int maxHealth;
+    public int damage;
 }
