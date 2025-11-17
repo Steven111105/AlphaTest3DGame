@@ -98,8 +98,8 @@ public class EnemyScript : MonoBehaviour
         shootPoint.LookAt(PlayerAttack.instance.transform);
         // shoot 3 rays so the enemy needs to peek a bit more
         return CheckRayCast(shootPoint.position, PlayerAttack.instance.transform)
-                && CheckRayCast(shootPoint.position  + new Vector3(0.12f, 0, 0), PlayerAttack.instance.transform)
-                && CheckRayCast(shootPoint.position  + new Vector3(-0.12f, 0, 0), PlayerAttack.instance.transform)
+                && CheckRayCast(shootPoint.position  + (shootPoint.right * 0.12f), PlayerAttack.instance.transform)
+                && CheckRayCast(shootPoint.position  + (shootPoint.right * -0.12f), PlayerAttack.instance.transform)
         ;
         
     }
